@@ -39,7 +39,7 @@ You will also need a SSL certificate.   You can make a self signed certificate w
     cat key.pem cert.pem >server.pem
 
 
-it puts auth keys in /var/userserv/  make sure this can't be read by anyone else
+it puts auth tokens in /var/userserv/  make sure this can't be read by anyone else
 
     sudo mkdir /var/userserv
     sudo chmod 700 /var/userserv
