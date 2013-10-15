@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -258,7 +260,21 @@ void handleConnection(int socketfd)  {
 						}
 					}
 					if (S_ISDIR(fileInfo.st_mode)) {
-						sendSimpleHTMLPage(socketfd,"200 OK","That's a directory");
+						char* command;
+						int commandLength = asprintf(&command,"ls -al %s",fileName);
+						if (commandLength>0) {
+							FILE* commandPipe = popen(command,"r");
+							if (commandPipe) { 
+								int commandfd=(fileno(commandPipe));
+								sendFileChunked(socketfd,"200 OK",commandfd);
+								pclose(commandPipe);
+							} else {
+								sendSimpleHTMLPage(socketfd,"500 Internal Server Error","popen failure");
+							}
+							free(command);
+						} else {
+						  sendSimpleHTMLPage(socketfd,"200 OK","That's a directory");
+						}  
 					}
 
 				}
