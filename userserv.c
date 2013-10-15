@@ -69,12 +69,24 @@ void sendSimpleHTMLPage(int fd, char* status, char* content) {
 void sendFile(int socketfd, char* status, int filefd) {
 	long length = (long)lseek(filefd, (off_t)0, SEEK_END); /* lseek to the file end to find the length */
 	lseek(filefd, (off_t)0, SEEK_SET);
-	dprintf(socketfd,"HTTP/1.0 %s \r\nContent-Length: %ld\r\n\r\n",status, length);
+	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Length: %ld\r\n\r\n",status, length);
 	char buffer[BUFFER_SIZE];
 	int bytesRead;
 	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
 		write(socketfd,buffer,bytesRead);
 	}
+}
+
+void sendFileChunked(int socketfd, char* status, int filefd) {
+	dprintf(socketfd,"HTTP/1.1 %s \r\nTransfer-Encoding: chunked\r\n\r\n",status);
+	char buffer[BUFFER_SIZE];
+	int bytesRead;
+	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
+		dprintf(socketfd, "%x\r\n",bytesRead); 
+		write(socketfd,buffer,bytesRead);
+		dprintf(socketfd, "\r\n"); 
+	}
+	dprintf(socketfd, "0\r\n\r\n",bytesRead); 
 }
 
 char* findHeader(int start, int headerCount, char** headerList, const char* name) {
@@ -241,7 +253,7 @@ void handleConnection(int socketfd)  {
 						if (filefd < 0) {
 							sendSimpleHTMLPage(socketfd,"403 Forbidden","403: Forbidden");
 						} else {
-							sendFile(socketfd,"200 OK",filefd);
+							sendFileChunked(socketfd,"200 OK",filefd);
 							close(filefd);
 						}
 					}
@@ -256,6 +268,7 @@ void handleConnection(int socketfd)  {
 			}
 		}
 	}
+	logText("done response, closing connection");
 	sleep(1);
 	close(socketfd);
 	exit(1);
