@@ -61,11 +61,11 @@ void scrub() {
 }
 
 void sendHTMLPage(int fd, char* status,char* headers, char* content) {
-	dprintf(fd,"HTTP/1.0 %s \r\n%sContent-Length: %d\r\n\r\n%s", status,headers, strlen(content),content);
+	dprintf(fd,"HTTP/1.0 %s \r\n%sContent-Length: %zu\r\n\r\n%s", status,headers, strlen(content),content);
 }
 
 void sendSimpleHTMLPage(int fd, char* status, char* content) {
-	dprintf(fd,"HTTP/1.0 %s \r\nContent-Length: %d\r\n\r\n%s", status, strlen(content),content);
+	dprintf(fd,"HTTP/1.0 %s \r\nContent-Length: %zu\r\n\r\n%s", status, strlen(content),content);
 }
 
 void sendFile(int socketfd, char* status, int filefd) {
@@ -164,14 +164,15 @@ void handleConnection(int socketfd)  {
 				char* user = NULL;
 				char* pass = NULL;
 				user = strstr(userpass,"user=")+5;
-				pass = strstr(userpass,"pass=")+5;
+				pass = url_decode(strstr(userpass,"pass=")+5);
 				char* ampersand;
 				while((ampersand=strchr(userpass,'&'))!=NULL) {
 					*ampersand = 0;
 				}
-				logFormat("I think the userName is %s\n",user);
-				logFormat("I think the passWord is %s\n",pass);				
-				pwd = checkUserPass(user,pass);				
+				logFormat("I think the userName is '%s'\n",user);
+				logFormat("I think the passWord is '%s'\n",pass);				
+				pwd = checkUserPass(user,pass);
+				free(pass);				
 			}
 			char* resultPage;
 			if (pwd != NULL) {
@@ -261,7 +262,8 @@ void handleConnection(int socketfd)  {
 					}
 					if (S_ISDIR(fileInfo.st_mode)) {
 						char* command;
-						int commandLength = asprintf(&command,"ls -al %s",fileName);
+						char* awkline = "BEGIN {print \"{\\\"contents\\\":[\"} END{print\"]};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"{\\\"filename\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9,  $3, $5) }";
+						int commandLength = asprintf(&command,"ls -al %s|  awk '%s'",fileName,awkline);
 						if (commandLength>0) {
 							FILE* commandPipe = popen(command,"r");
 							if (commandPipe) { 
