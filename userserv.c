@@ -88,7 +88,7 @@ void sendFileChunked(int socketfd, char* status, int filefd) {
 		write(socketfd,buffer,bytesRead);
 		dprintf(socketfd, "\r\n"); 
 	}
-	dprintf(socketfd, "0\r\n\r\n",bytesRead); 
+	dprintf(socketfd, "0\r\n\r\n"); 
 }
 
 char* findHeader(int start, int headerCount, char** headerList, const char* name) {
@@ -329,8 +329,16 @@ void serverListen(int port) {
 	
 }
 
+void flushOldFiles() {
+	system("find /var/lib/userserv -type f -mtime +1 -exec rm {} \\;");
+}
+void init() {
+	system("mkdir -p /var/lib/userserv -m 700");
+	flushOldFiles();
+}
+
 int main (int argc, char **argv) {
-	
+	init();
 	if (fork() !=0 ) return 0;
 	
 	(void) signal(SIGCLD, SIG_IGN);
