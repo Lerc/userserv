@@ -20,6 +20,8 @@ The server process itself only listens on 127.0.0.1:8082 without any ssl
 encryption, however the HTTP response headers specify the cookie as 
 "Set-Cookie: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX; Secure; HttpOnly"
 
+It puts auth tokens in /var/lib/userserv/  
+
 To provide a secure remote port use something like socat to handle
 accepting ssl connections from the outside world.
 
@@ -39,12 +41,6 @@ You will also need a SSL certificate.   You can make a self signed certificate w
     cat key.pem cert.pem >server.pem
 
 
-it puts auth tokens in /var/userserv/  make sure this can't be read by anyone else
-
-    sudo mkdir /var/userserv
-    sudo chmod 700 /var/userserv
-
-
 Then run the server and socat
 
     sudo userserv
@@ -60,5 +56,7 @@ now try reading a file you shouldn't be allowed to see
 https://machine_name_or_ip/root/.bashrc
 
 You can see logging information in userserv.log.  There's a lot of logging going on
-right now because of the developmental state of the program.
+right now because of the developmental state of the program,
+You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. 
+
 
