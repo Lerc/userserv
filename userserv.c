@@ -82,7 +82,7 @@ void sendSimpleHTMLPage(int fd, char* status, char* content) {
 void sendFile(int socketfd, char* status, int filefd) {
 	long length = (long)lseek(filefd, (off_t)0, SEEK_END); /* lseek to the file end to find the length */
 	lseek(filefd, (off_t)0, SEEK_SET);
-	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Length: %ld\r\n\r\n",status, length);
+	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Length: %ld\r\nConnection:close\r\n\r\n",status, length);
 	char buffer[BUFFER_SIZE];
 	int bytesRead;
 	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
@@ -91,7 +91,7 @@ void sendFile(int socketfd, char* status, int filefd) {
 }
 
 void sendFileChunked(int socketfd, char* status, int filefd) {
-	dprintf(socketfd,"HTTP/1.1 %s \r\nTransfer-Encoding: chunked\r\n\r\n",status);
+	dprintf(socketfd,"HTTP/1.1 %s \r\nTransfer-Encoding: chunked\r\nConnection:close\r\n\r\n",status);
 	char buffer[BUFFER_SIZE];
 	int bytesRead;
 	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
