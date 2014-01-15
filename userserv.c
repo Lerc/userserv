@@ -1,5 +1,7 @@
 #define _GNU_SOURCE
 
+#define LOGGING
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdarg.h>
@@ -25,6 +27,10 @@ void logFormat(char* text,...);
 
 #include "readuntil.c"
 #include "authenticationtoken.c"
+#include "websocketbridge.c"
+
+
+#ifdef LOGGING
 
 void logText(char* text) {
 	int fd = open("userserv.log", O_CREAT| O_WRONLY | O_APPEND,0644);
@@ -52,6 +58,11 @@ void fail(char* text) {
 	logText(msgBuffer);
 	exit(3);
 }
+#else 
+void logText(char* text) {}
+void logFormat(char* text,...) {}
+void fail(char* text) {exit(3);}
+#endif
 
 void scrub() {
 	int i;
@@ -104,6 +115,26 @@ char* findHeader(int start, int headerCount, char** headerList, const char* name
 	return NULL;
 }
 
+void sendLoginPage(int socketfd) {
+	char* loginPage="<html><head>"
+								"<style>"
+										"body{background-color:grey; font-family: sans-serif}"
+										"input{background-color:white}"
+										"#loginBox{position:absolute;top:40%; left:0px; right:0px;}"
+										"input{float:right;width:16em;}"
+										"#loginBox>form>div{padding: 8px}"
+										"#loginBox>form{background-color: #dfd;margin: 0 auto; box-shadow:0px 0px 0px 2px black,3px 3px 12px 2px black;width:20em; padding: 40px; border-radius: 8px 64px 8px 64px}"
+								"</style></head>"
+								"<body><div id=\"loginBox\">"
+									 "<form action=\"/login\" method=\"post\"><div><label for=\"user\">User Name</label><input type=\"text\" id=\"user\" name=\"user\" /></div><div><label for=\"pass\">Password</label><input type=\"password\" id=\"pass\" name=\"pass\"/></div><div><input type=\"submit\" value=\"login\"></div></form>"
+								"</div></body></html>";
+	char* headers = "";
+	logText("Sending login page");
+
+	sendHTMLPage(socketfd,"200 ok",headers,loginPage);	
+}
+
+
 void handleConnection(int socketfd)  {
 	static char buffer[BUFFER_SIZE+1];
 	static char* headers[HEADER_LIMIT+1];
@@ -153,9 +184,12 @@ void handleConnection(int socketfd)  {
 	*/
 	
 	char* aCookie = findHeader(0,headerCount,headers,"Cookie:");
-	if (aCookie == NULL) {
+	int uid=getUserInfo(aCookie);
+  logFormat("uid of %d\n",uid);
+	
+	if (uid <= 0) {
 		if (strncmp("POST /login ",headers[0],12) == 0 ) {
-			 //for a CookieLess POST to /login try and read user credentials.  
+			 //for a non-logged-in user POST to /login try and read user credentials.  
 			logText("Login request received");
 			char userpass[300];
 			struct passwd* pwd = NULL;
@@ -186,6 +220,7 @@ void handleConnection(int socketfd)  {
 					"<div>Login Successful</div>"
 				"</body></html>";
 				sendHTMLPage(socketfd,"200 ok",pageHeaders,resultPage);
+				free(pageHeaders);
 			} else {
 				resultPage=
 				"<html><head></head><body"
@@ -194,96 +229,71 @@ void handleConnection(int socketfd)  {
 				sendSimpleHTMLPage(socketfd,"401 Unauthorised",resultPage);
 			}			
 		} else {
-			char* loginPage="<html><head>"
-											"<style>"
-											    "body{background-color:grey; font-family: sans-serif}"
-											    "input{background-color:white}"
-											    "#loginBox{position:absolute;top:40%; left:0px; right:0px;}"
-											    "input{float:right;width:16em;}"
-											    "#loginBox>form>div{padding: 8px}"
-											    "#loginBox>form{background-color: #dfd;margin: 0 auto; box-shadow:0px 0px 0px 2px black,3px 3px 12px 2px black;width:20em; padding: 40px; border-radius: 8px 64px 8px 64px}"
-											"</style></head>"
-											"<body><div id=\"loginBox\">"
-											   "<form action=\"login\" method=\"post\"><div><label for=\"user\">User Name</label><input type=\"text\" id=\"user\" name=\"user\" /></div><div><label for=\"pass\">Password</label><input type=\"password\" id=\"pass\" name=\"pass\"/></div><div><input type=\"submit\" value=\"login\"></div></form>"
-											"</div></body></html>";
-			sendSimpleHTMLPage(socketfd,"200 ok",loginPage);
+			sendLoginPage(socketfd);
 		}
-		/*
-		//send a dummy page.
-		char key[33];
-		makeAuthenticationToken(1000,key,sizeof(key)); 
-		logText("setting cookie");
-		logText(key);
+	}	else {			
+		setuid(uid);
+		//if we get to here, the request sent a token identifying them as a 
+		//valid user and we have dropped privileges to be that user.
+		//now we can set about serving the user request.
+		char* upgrade = findHeader(0,headerCount,headers,"Upgrade:");
+		if (upgrade) {
+			 //Try using websockets
+			 char* websocket_key = findHeader(0,headerCount,headers,"Sec-WebSocket-Key:");
+			 char* websocket_protocol = findHeader(0,headerCount,headers,"Sec-Websocket-Protocol:");
+			 char* websocket_version = findHeader(0,headerCount,headers,"Sec-WebSocket-Version:");
+			 char* origin = findHeader(0,headerCount,headers,"Origin:");
+			 webSocketUpgrade(socketfd,websocket_key,websocket_protocol,websocket_version,origin);
+			 //webSocketUpgrade should never return
+		}
 		
-		char* response1 = "HTTP/1.0 200 ok\r\nSet-Cookie: ";
-		char* response2 = "; Secure; HttpOnly\r\nContent-Type text/html\r\nContent-Length: 73\r\n\r\n<html><head></head><body>We probably just set a dumb cookie</body></html>";
-		write(socketfd,response1,strlen(response1));
-		write(socketfd,key,strlen(key));
-		write(socketfd,response2,strlen(response2));
-		*/
-	} else {
-		int uid=getUserInfo(aCookie);
-		logFormat("We got a cookie of %s which is uid %d\n",aCookie,uid);
-		if (uid <= 0) {
-				sendSimpleHTMLPage(socketfd,"200 ok",
-				"<html><head></head><body"
-					"<div>I'm afraid you can't do that.....yet.</div>"
-				"</body></html>");	
-			
-		} else {			
-			setuid(uid);
-			//if we get to here, the request sent a token identifying them as a 
-			//valid user and we have dropped privileges to be that user.
-			//now we can set about serving the user request.
-			if (strncmp("GET ",headers[0],4) == 0 ) {
-				char* nameStart=headers[0]+4;
-				int nameLen = strcspn(nameStart," ");
-				char* urlName=strndup(nameStart,nameLen);
-				char* fileName=url_decode(urlName);
-				logFormat("url request '%s'\n",urlName);
-				logFormat("filename request '%s'\n",fileName);
-				struct stat fileInfo;
-				int res=stat(fileName,&fileInfo);
-				if (res !=0)  {
-					if (errno == EACCES) {
+		if (strncmp("GET ",headers[0],4) == 0 ) {
+			char* nameStart=headers[0]+4;
+			int nameLen = strcspn(nameStart," ");
+			char* urlName=strndup(nameStart,nameLen);
+			char* fileName=url_decode(urlName);
+			logFormat("url request '%s'\n",urlName);
+			logFormat("filename request '%s'\n",fileName);
+			struct stat fileInfo;
+			int res=stat(fileName,&fileInfo);
+			if (res !=0)  {
+				if (errno == EACCES) {
+					sendSimpleHTMLPage(socketfd,"403 Forbidden","403: Forbidden");
+				} else {
+					sendSimpleHTMLPage(socketfd,"404 Not Found","404: Not Found");
+				}
+			}	else {
+				if (S_ISREG(fileInfo.st_mode)) {
+					int filefd=open(fileName,O_RDONLY);
+					if (filefd < 0) {
 						sendSimpleHTMLPage(socketfd,"403 Forbidden","403: Forbidden");
 					} else {
-						sendSimpleHTMLPage(socketfd,"404 Not Found","404: Not Found");
+						sendFileChunked(socketfd,"200 OK",filefd);
+						close(filefd);
 					}
-				}	else {
-					if (S_ISREG(fileInfo.st_mode)) {
-						int filefd=open(fileName,O_RDONLY);
-						if (filefd < 0) {
-							sendSimpleHTMLPage(socketfd,"403 Forbidden","403: Forbidden");
-						} else {
-							sendFileChunked(socketfd,"200 OK",filefd);
-							close(filefd);
-						}
-					}
-					if (S_ISDIR(fileInfo.st_mode)) {
-						char* command;
-						char* awkline = "BEGIN {print \"{\\\"contents\\\":[\"} END{print\"]};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"{\\\"filename\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9,  $3, $5) }";
-						int commandLength = asprintf(&command,"ls -al %s|  awk '%s'",fileName,awkline);
-						if (commandLength>0) {
-							FILE* commandPipe = popen(command,"r");
-							if (commandPipe) { 
-								int commandfd=(fileno(commandPipe));
-								sendFileChunked(socketfd,"200 OK",commandfd);
-								pclose(commandPipe);
-							} else {
-								sendSimpleHTMLPage(socketfd,"500 Internal Server Error","popen failure");
-							}
-							free(command);
-						} else {
-						  sendSimpleHTMLPage(socketfd,"200 OK","That's a directory");
-						}  
-					}
-
 				}
-				free(fileName);
-				free(urlName);
+				if (S_ISDIR(fileInfo.st_mode)) {
+					char* command;
+					char* awkline = "BEGIN {print \"{\\\"contents\\\":[\"} END{print\"]};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"{\\\"filename\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9,  $3, $5) }";
+					int commandLength = asprintf(&command,"ls -al %s|  awk '%s'",fileName,awkline);
+					if (commandLength>0) {
+						FILE* commandPipe = popen(command,"r");
+						if (commandPipe) { 
+							int commandfd=(fileno(commandPipe));
+							sendFileChunked(socketfd,"200 OK",commandfd);
+							pclose(commandPipe);
+						} else {
+							sendSimpleHTMLPage(socketfd,"500 Internal Server Error","popen failure");
+						}
+						free(command);
+					} else {
+						sendSimpleHTMLPage(socketfd,"200 OK","That's a directory");
+					}  
+				}
 
 			}
+			free(fileName);
+			free(urlName);
 		}
 	}
 	logText("done response, closing connection");
