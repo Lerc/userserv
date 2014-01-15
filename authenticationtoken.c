@@ -5,8 +5,10 @@ char* AuthDirectory = "/var/lib/userserv/";
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 int getUserInfo(char* authenticationToken) {
+	if (authenticationToken == NULL) return -1;
 	char fileName[1024];
-	if (strlen(authenticationToken)>40) return -1;
+	int tokenLength=strlen(authenticationToken);
+	if ( (tokenLength>40)||(tokenLength<10)) return -1;
 	
 	strcpy(fileName,AuthDirectory);
 	strcat(fileName,authenticationToken);
