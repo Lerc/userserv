@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#This is a quick and dirty directory->json script It will *NOT* work for all filenames
+#filenames containing " and a few other exotic characters will generate broken output
+#This _will_ have to be replaced with a better script that sends escaped strings.
+
+DIRNAME="$1"
+if [ -z "$DIRNAME" ]; then
+	DIRNAME="."
+fi
+
+DIRNAME=$(readlink -e "$DIRNAME");
+
+DIR=$(find -L "$DIRNAME" -maxdepth 1 -printf '    {"filename":"%f", "attributes":"%M", "owner":"%u", "group":"%g", "size":%s},\n'|head -c-2) 
+
+echo "{\"path\":\"$DIRNAME\"," 
+echo " \"contents\":[" 
+echo "$DIR]"
+echo "}"
