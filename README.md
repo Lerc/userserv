@@ -7,7 +7,7 @@ The server runs as root,  Accepts logins, but only serves filesystem data after 
 
 Userserv delegates the SSL responsibility to socat.  Socat listens for https connections from the outside world and frowards them to port 8082.  useserv only accepts connections from localhost.
 
-###What happens in a request###
+###What happens in a request?###
 userserv runs as root.  Root level process works like this.
 
 ####Core process(root):
@@ -22,8 +22,8 @@ userserv runs as root.  Root level process works like this.
 + drop root priveleges, setuid down to the user specified in the file
 
 ####Procees is no longer root.
-+ If the headers indicate a websocket upgrade,  Negotiate conection upgrade, dup2() connection FD into STDIO, exec laumch-websession 
-+ if the GET URL is a directory use jsondir script to send a directory information page.
++ If the headers indicate a websocket upgrade,  Negotiate conection upgrade, dup2() connection FD into STDIO, exec launch-websession 
++ if the GET URL is a directory use the jsondir script to send a directory information page.
 + if the GET URL is a file send the file.
 
 
