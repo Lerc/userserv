@@ -1,0 +1,5 @@
+#!/bin/sh 
+
+echo "Starting new WebSession" >websession.log
+node websession.js >>websession.log 2>&1
+
