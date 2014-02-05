@@ -134,6 +134,9 @@ void sendLoginPage(int socketfd) {
 	sendHTMLPage(socketfd,"200 ok",headers,loginPage);	
 }
 
+char* expandFilename(const char* original) {
+	return strdup(original);	
+}
 
 void handleConnection(int socketfd)  {
 	static char buffer[BUFFER_SIZE+1];
@@ -254,6 +257,8 @@ void handleConnection(int socketfd)  {
 			char* fileName=url_decode(urlName);
 			logFormat("url request '%s'\n",urlName);
 			logFormat("filename request '%s'\n",fileName);
+			char* newFileName=expandFilename(fileName);
+			free(fileName); fileName=newFileName;			
 			struct stat fileInfo;
 			int res=stat(fileName,&fileInfo);
 			if (res !=0)  {
@@ -274,8 +279,10 @@ void handleConnection(int socketfd)  {
 				}
 				if (S_ISDIR(fileInfo.st_mode)) {
 					char* command;
-					char* awkline = "BEGIN {print \"{\\\"contents\\\":[\"} END{print\"]};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"{\\\"filename\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9,  $3, $5) }";
-					int commandLength = asprintf(&command,"ls -al %s|  awk '%s'",fileName,awkline);
+					char* awkline = "BEGIN {printf(\"{\\\"path\\\":\\\"%s\\\",\\n \\\"contents\\\":[\\n\",path)} END{print\"\\n  ]\\n};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"    {\\\"filename\\\":\\\"%s\\\", \\\"attributes\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9, $1, $3, $5) }";
+					//int commandLength = asprintf(&command,"ls -AlQ %s|  awk -v path=%s '%s'",fileName,fileName,awkline);
+					int commandLength = asprintf(&command,"./jsondir '%s'",fileName);
+					logText(command);
 					if (commandLength>0) {
 						FILE* commandPipe = popen(command,"r");
 						if (commandPipe) { 
