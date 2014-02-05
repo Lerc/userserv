@@ -135,6 +135,14 @@ void sendLoginPage(int socketfd) {
 }
 
 char* expandFilename(const char* original) {
+	char* home = getenv("HOME");
+	logFormat("$HOME is %s\n",home);
+	if (strcmp(original,"/~")==0) return strdup(home);
+	if (strncmp(original,"/~/",3)==0) {
+		char* result;
+		int len=asprintf(&result,"%s%s",home,original+2);
+		return(result);
+	}
 	return strdup(original);	
 }
 
@@ -236,6 +244,8 @@ void handleConnection(int socketfd)  {
 		}
 	}	else {			
 		setuid(uid);
+		struct passwd *pw = getpwuid(uid);
+		setenv("HOME",pw->pw_dir,1);
 		//if we get to here, the request sent a token identifying them as a 
 		//valid user and we have dropped privileges to be that user.
 		//now we can set about serving the user request.
