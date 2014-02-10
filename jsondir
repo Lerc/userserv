@@ -9,7 +9,7 @@ if [ -z "$DIRNAME" ]; then
 	DIRNAME="."
 fi
 
-DIRNAME=$(readlink -e "$DIRNAME");
+DIRNAME=$(cd "$DIRNAME";pwd);
 
 DIR=$(find -L "$DIRNAME" -maxdepth 1 -printf '    {"filename":"%f", "attributes":"%M", "owner":"%u", "group":"%g", "size":%s},\n'|head -c-2) 
 
