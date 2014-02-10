@@ -41,8 +41,8 @@ char *url_decode(char *str) {
         *pbuf++ = from_hex(pstr[1]) << 4 | from_hex(pstr[2]);
         pstr += 2;
       }
-    } else if (*pstr == '+') { 
-      *pbuf++ = ' ';
+    /*} *else if (*pstr == '+') { 
+      *pbuf++ = ' ';*/
     } else {
       *pbuf++ = *pstr;
     }
