@@ -1,7 +1,10 @@
 userserv
 ========
-A static http server that serves with the permissions of individual Linux users
-(this program is alpha quality, It generates copious logfiles containing potetially sensitive information)
+A static http server that serves with the permissions of individual Linux users, 
+It was designed with https://github.com/Lerc/notanos in mind. The basic server,
+simply serves files (and json for directories). Running <tt>userserv -n</tt> will
+enable the server to listen for websocket upgrade requests and upon successful handshake,
+run the server side of notanos.  The notanos component requires nodejs. 
 
 The server runs as root,  Accepts logins, but only serves filesystem data after dropping privelages.
 
@@ -30,23 +33,21 @@ userserv runs as root.  Root level process works like this.
 Setup
 =====
 
-Assuming you have GCC and libpam.
+Assuming you have GCC and libpam-dev.
 
-    ./buildit.sh
+    make all
 
+The make process generates a self signed certificate to use.  It will ask for some details,
+If you don't want to add details, pressing enter at every prompt should work.
 
-You will also need a SSL certificate.   You can make a self signed certificate with
+To install
 
-    openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
-    cat key.pem cert.pem >server.pem
+		sudo make install
 
+Start the server with
 
-Then run the server and socat
-
-    sudo userserv
-    sudo socat openssl-listen:443,fork,verify=0,cert=server.pem  tcp:localhost:8082
-
-
+		sudo userserv
+	
 you should then be able to https://machine_name_or_ip to get the login screen
 
 once logged in try https://machine_name_or_ip/proc/cpuinfo
@@ -55,8 +56,8 @@ now try reading a file you shouldn't be allowed to see
 
 https://machine_name_or_ip/root/.bashrc
 
-You can see logging information in userserv.log.  There's a lot of logging going on
+<s>You can see logging information in userserv.log.  There's a lot of logging going on
 right now because of the developmental state of the program,
 You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. 
-
+</s>  logging should be off by default now.
 
