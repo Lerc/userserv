@@ -32,9 +32,9 @@ install:  selfsignedkey.pem
 	$(INSTALL)  -m755 userserv_launch_script.sh "$(bindir)"/userserv
 	
 clean:
-	rm userserv
-	rm naosserv
-	rm *.pem
+	rm -vf userserv
+	rm -vf naosserv
+	rm -vf *.pem
 	
 	
 	
