@@ -9,7 +9,8 @@ LIBS+=-lpam
 INSTALL=install
 
 DATAFILES=websession.js websessionmanager.js selfsignedkey.pem
-SCRIPTFILES=jsondir launch-websession launch-websession-manager 
+SCRIPTFILES=jsondir launch-websession launch-websession-manager
+NODEMODULES=websocket sugar
 PROGFILES=userserv naosserv 
 
 userserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c
@@ -30,6 +31,7 @@ install:  selfsignedkey.pem
 	$(INSTALL)  -m755 $(SCRIPTFILES) "$(datadir)"
 	$(INSTALL)  -m644 $(DATAFILES) "$(datadir)"
 	$(INSTALL)  -m755 userserv_launch_script.sh "$(bindir)"/userserv
+	cp -dR --preserve=mode,timestamps node_modules "$(datadir)"
 	
 clean:
 	rm -vf userserv
