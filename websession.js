@@ -3,7 +3,9 @@ var websocket=require('websocket');
 var socket = new net.Socket({fd:0, readable:true, writeable:true});
 
 var subProtocol = "dummy";
-var localSocketPath = "/tmp/test.sock";
+var localSocketPath = "/tmp/websession_socket."+process.pid;
+
+process.env.WEBSESSION=localSocketPath;
 
 var connectCounter = 1;
 var connections = [];
@@ -92,4 +94,9 @@ process.on("exit", function () {
 	console.log("shutting down websession")}
 );
 
+var spawn = require('child_process').spawn;
+
+var manager=spawn("./launch-websession-manager", []); 
+
+console.log(process.env);
 console.log("init done, just event handling now.");
