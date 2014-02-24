@@ -6,7 +6,7 @@ simply serves files (and json for directories). Running <tt>userserv -n</tt> wil
 enable the server to listen for websocket upgrade requests and upon successful handshake,
 run the server side of notanos.  The notanos component requires nodejs. 
 
-The server runs as root,  Accepts logins, but only serves filesystem data after dropping privelages.
+The server runs as root to accept logins, but only serves filesystem data after dropping privelages.
 
 Userserv delegates the SSL responsibility to socat.  Socat listens for https connections from the outside world and frowards them to port 8082.  useserv only accepts connections from localhost.
 
@@ -35,7 +35,7 @@ Setup
 
 Assuming you have GCC and libpam-dev.
 
-    make all
+		make all
 
 The make process generates a self signed certificate to use.  It will ask for some details,
 If you don't want to add details, pressing enter at every prompt should work.
@@ -56,8 +56,7 @@ now try reading a file you shouldn't be allowed to see
 
 https://machine_name_or_ip/root/.bashrc
 
-<s>You can see logging information in userserv.log.  There's a lot of logging going on
+~~You can see logging information in userserv.log.  There's a lot of logging going on
 right now because of the developmental state of the program,
-You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. 
-</s>  logging should be off by default now.
+You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. ~~  logging should be off by default now.
 
