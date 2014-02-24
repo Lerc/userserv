@@ -13,27 +13,22 @@ if [ -d "$SUPPORTFILES" ]; then
 	cd $SUPPORTFILES
 fi
 
-
-echo $HERE
-pwd
-
-for arg in "$@:"
-do
-	case $arg in
-		-n | --notanos ) 
+while getopts ":nx" opt; do
+	case $opt in
+		n) 
 			NOTANOS="yes"
 			;;
 		
-		-x | --nosocat )
+		x)
 			NOSOCAT="yes"						
 	esac
 done
 
-if [ NOSOCAT != 'yes' ]; then
-	sudo socat openssl-listen:443,fork,verify=0,cert=selfsignedkey.pem  tcp:localhost:8082 &
+if [ "$NOSOCAT" != 'yes' ]; then
+	socat openssl-listen:443,fork,verify=0,cert=selfsignedkey.pem  tcp:localhost:8082 &
 fi
 
-if [ NOTANOS == 'yes']; then
+if [ "$NOTANOS" == 'yes' ]; then
 	exec ./naosserv
 fi
 
