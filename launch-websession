@@ -1,5 +1,8 @@
 #!/bin/sh 
 
-echo "Starting new WebSession" >websession.log
-exec node websession.js >>websession.log 2>&1
+#LOGFILE=websession.log
+LOGFILE=/dev/null
+
+echo "Starting new WebSession" >"$LOGFILE" 
+exec node websession.js >>"$LOGFILE" 2>&1
 

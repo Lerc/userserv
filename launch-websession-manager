@@ -1,5 +1,8 @@
 #!/bin/sh 
 
-echo "Starting new WebSession Manager" >websession_manager.log
-exec node websessionmanager.js >>websession_manager.log 2>&1
+#LOGFILE=websession_manager.log
+LOGFILE=/dev/null
+
+echo "Starting new WebSession Manager" >"$LOGFILE" 
+exec node websessionmanager.js >>"$LOGFILE"  2>&1
 
