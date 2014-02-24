@@ -56,7 +56,7 @@ now try reading a file you shouldn't be allowed to see
 
 https://machine_name_or_ip/root/.bashrc
 
-~~You can see logging information in userserv.log.  There's a lot of logging going on
+<del>You can see logging information in userserv.log.  There's a lot of logging going on
 right now because of the developmental state of the program,
-You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. ~~  logging should be off by default now.
+You _will_ see plaintext passwords in the logfile.  That'll be turned off soon. </del>  logging should be off by default now.
 
