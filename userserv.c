@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 
-#define LOGGING
+//#define LOGGING
 
 #include <unistd.h>
 #include <sys/stat.h>
@@ -222,7 +222,7 @@ void handleConnection(int socketfd)  {
 			char* resultPage;
 			if (pwd != NULL) {
 				logText("setting cookie");
-				char* pageHeaders=strdup("Set-Cookie: 12345678901234567890123456789012; Secure; HttpOnly\r\nContent-Type text/html\r\n");
+				char* pageHeaders=strdup("Set-Cookie: 12345678901234567890123456789012; Secure; HttpOnly\r\nContent-Type text/html\r\nLocation: /~\r\n");
 				char* token=pageHeaders+12;
 				makeAuthenticationToken(pwd->pw_uid,token,32); 
 				logText(pageHeaders);
@@ -230,7 +230,7 @@ void handleConnection(int socketfd)  {
 				"<html><head></head><body"
 					"<div>Login Successful</div>"
 				"</body></html>";
-				sendHTMLPage(socketfd,"200 ok",pageHeaders,resultPage);
+				sendHTMLPage(socketfd,"303 See Other",pageHeaders,resultPage);
 				free(pageHeaders);
 			} else {
 				resultPage=
@@ -246,9 +246,13 @@ void handleConnection(int socketfd)  {
 		setuid(uid);
 		struct passwd *pw = getpwuid(uid);
 		setenv("HOME",pw->pw_dir,1);
+		setenv("USER",pw->pw_name,1);
+		setenv("SHELL",pw->pw_shell,1);
 		//if we get to here, the request sent a token identifying them as a 
 		//valid user and we have dropped privileges to be that user.
 		//now we can set about serving the user request.
+#ifdef NOTANOS 
+		//support for a notanos websocket server.  
 		char* upgrade = findHeader(0,headerCount,headers,"Upgrade:");
 		if (upgrade) {
 			 //Try using websockets
@@ -258,8 +262,8 @@ void handleConnection(int socketfd)  {
 			 char* origin = findHeader(0,headerCount,headers,"Origin:");
 			 webSocketUpgrade(socketfd,websocket_key,websocket_protocol,websocket_version,origin);
 			 //webSocketUpgrade should never return
-		}
-		
+		} 
+#endif		
 		if (strncmp("GET ",headers[0],4) == 0 ) {
 			char* nameStart=headers[0]+4;
 			int nameLen = strcspn(nameStart," ");
