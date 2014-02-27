@@ -79,6 +79,7 @@ function handleNewConnections(c) {
 		sendData(data);
 	});
 	c.on("close", function () {
+		sendCloseNotification();
 		delete connections[id];		
 	});
 	 
