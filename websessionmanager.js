@@ -27,17 +27,26 @@ function failCall(request,errorText) {
 
 var callHandlers = {};
 
-function standardResponse(err,stats) {
+function standardResponse(err,result) {
 	//this function expects the request to be bound in this.
 	if (err) {
 		failCall(this,"something bad!?!");
 		return;
 	}
-	respond(this,{"result":stats});
+	respond(this,{"result":result});
+} 
+
+function noErrorPossibleResponse(result) {
+	//this function expects the request to be bound in this.
+	respond(this,{"result":result});
 } 
 
 callHandlers.stat=function(request) {
 	fs.stat(request.args.path,standardResponse.bind(request));
+}
+
+callHandlers.exists=function(request) {
+	fs.exists(request.args.path,noErrorPossibleResponse.bind(request));
 }
 
 callHandlers.rename=function(request) {
@@ -74,6 +83,7 @@ callHandlers.appendFile=function(request) {
 	var a=request.args; 
 	fs.appendFile(a.filename,a.data,a.options,standardResponse.bind(request));
 }
+
 
 callHandlers.exec=function(request) {
 	var a=request.args; 
