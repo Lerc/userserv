@@ -1,6 +1,6 @@
 #!/bin/sh 
 
-#LOGFILE=websession.log
+#LOGFILE=~/websession.log
 LOGFILE=/dev/null
 
 echo "Starting new WebSession" >"$LOGFILE" 

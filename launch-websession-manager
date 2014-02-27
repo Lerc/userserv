@@ -1,6 +1,6 @@
 #!/bin/sh 
 
-#LOGFILE=websession_manager.log
+#LOGFILE=~/websession_manager.log
 LOGFILE=/dev/null
 
 echo "Starting new WebSession Manager" >"$LOGFILE" 
