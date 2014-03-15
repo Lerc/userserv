@@ -72,17 +72,17 @@ void scrub() {
 }
 
 void sendHTMLPage(int fd, char* status,char* headers, char* content) {
-	dprintf(fd,"HTTP/1.0 %s \r\n%sContent-Length: %zu\r\n\r\n%s", status,headers, strlen(content),content);
+	dprintf(fd,"HTTP/1.0 %s \r\n%sContent-Type: text/html\r\nContent-Length: %zu\r\n\r\n%s", status,headers, strlen(content),content);
 }
 
 void sendSimpleHTMLPage(int fd, char* status, char* content) {
 	dprintf(fd,"HTTP/1.0 %s \r\nContent-Length: %zu\r\n\r\n%s", status, strlen(content),content);
 }
 
-void sendFile(int socketfd, char* status, int filefd) {
+void sendFile(int socketfd, char* status, int filefd, char * content_type) {
 	long length = (long)lseek(filefd, (off_t)0, SEEK_END); /* lseek to the file end to find the length */
 	lseek(filefd, (off_t)0, SEEK_SET);
-	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Length: %ld\r\nConnection:close\r\n\r\n",status, length);
+	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Type: %s;\r\nContent-Length: %ld\r\nConnection:close\r\n\r\n",status, content_type , length);
 	char buffer[BUFFER_SIZE];
 	int bytesRead;
 	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
@@ -90,8 +90,8 @@ void sendFile(int socketfd, char* status, int filefd) {
 	}
 }
 
-void sendFileChunked(int socketfd, char* status, int filefd) {
-	dprintf(socketfd,"HTTP/1.1 %s \r\nTransfer-Encoding: chunked\r\nConnection:close\r\n\r\n",status);
+void sendFileChunked(int socketfd, char* status, int filefd, char* content_type) {
+	dprintf(socketfd,"HTTP/1.1 %s \r\nContent-Type: %s;\r\nTransfer-Encoding: chunked\r\nConnection:close\r\n\r\n",status, content_type);
 	char buffer[BUFFER_SIZE];
 	int bytesRead;
 	while ((bytesRead = read(filefd,buffer,BUFFER_SIZE)) >0) {
@@ -132,6 +132,21 @@ void sendLoginPage(int socketfd) {
 	logText("Sending login page");
 
 	sendHTMLPage(socketfd,"200 ok",headers,loginPage);	
+}
+
+
+char* getContentType(char* filename) {
+// returns an allocated string,  must be freed;
+	char buffer[BUFFER_SIZE];
+  char* command;
+  asprintf(&command,"mimetype -b \"%s\"",filename);
+	FILE* fp = popen(command,"r");
+	free(command);
+	if (fp == NULL) return strdup("text/plain");
+	char* r = fgets(buffer,sizeof(buffer),fp);
+	pclose(fp);
+	if (r == NULL) return strdup("text/plain");	
+	return strdup(buffer);
 }
 
 char* expandFilename(const char* original) {
@@ -243,8 +258,9 @@ void handleConnection(int socketfd)  {
 			sendLoginPage(socketfd);
 		}
 	}	else {			
-		setuid(uid);
 		struct passwd *pw = getpwuid(uid);
+		setgid(uid);
+		setuid(uid);
 		setenv("HOME",pw->pw_dir,1);
 		setenv("USER",pw->pw_name,1);
 		setenv("SHELL",pw->pw_shell,1);
@@ -257,7 +273,7 @@ void handleConnection(int socketfd)  {
 		if (upgrade) {
 			 //Try using websockets
 			 char* websocket_key = findHeader(0,headerCount,headers,"Sec-WebSocket-Key:");
-			 char* websocket_protocol = findHeader(0,headerCount,headers,"Sec-Websocket-Protocol:");
+			 char* websocket_protocol = findHeader(0,headerCount,headers,"Sec-WebSocket-Protocol:");
 			 char* websocket_version = findHeader(0,headerCount,headers,"Sec-WebSocket-Version:");
 			 char* origin = findHeader(0,headerCount,headers,"Origin:");
 			 webSocketUpgrade(socketfd,websocket_key,websocket_protocol,websocket_version,origin);
@@ -272,7 +288,8 @@ void handleConnection(int socketfd)  {
 			logFormat("url request '%s'\n",urlName);
 			logFormat("filename request '%s'\n",fileName);
 			char* newFileName=expandFilename(fileName);
-			free(fileName); fileName=newFileName;			
+			free(fileName); fileName=newFileName;
+			char* contentType=getContentType(fileName);
 			struct stat fileInfo;
 			int res=stat(fileName,&fileInfo);
 			if (res !=0)  {
@@ -287,11 +304,11 @@ void handleConnection(int socketfd)  {
 					if (filefd < 0) {
 						sendSimpleHTMLPage(socketfd,"403 Forbidden","403: Forbidden");
 					} else {
-						sendFileChunked(socketfd,"200 OK",filefd);
+						sendFileChunked(socketfd,"200 OK",filefd,contentType);
 						close(filefd);
 					}
 				}
-				if (S_ISDIR(fileInfo.st_mode)) {
+				else if (S_ISDIR(fileInfo.st_mode)) {
 					char* command;
 					char* awkline = "BEGIN {printf(\"{\\\"path\\\":\\\"%s\\\",\\n \\\"contents\\\":[\\n\",path)} END{print\"\\n  ]\\n};\\n\"}  NR > 2 { printf(\",\\n\") } NR >1 { printf(\"    {\\\"filename\\\":\\\"%s\\\", \\\"attributes\\\":\\\"%s\\\", \\\"owner\\\":\\\"%s\\\", \\\"size\\\":%s}\", $9, $1, $3, $5) }";
 					//int commandLength = asprintf(&command,"ls -AlQ %s|  awk -v path=%s '%s'",fileName,fileName,awkline);
@@ -301,7 +318,7 @@ void handleConnection(int socketfd)  {
 						FILE* commandPipe = popen(command,"r");
 						if (commandPipe) { 
 							int commandfd=(fileno(commandPipe));
-							sendFileChunked(socketfd,"200 OK",commandfd);
+							sendFileChunked(socketfd,"200 OK",commandfd,"application/json");
 							pclose(commandPipe);
 						} else {
 							sendSimpleHTMLPage(socketfd,"500 Internal Server Error","popen failure");
@@ -314,6 +331,7 @@ void handleConnection(int socketfd)  {
 
 			}
 			free(fileName);
+			free(contentType);
 			free(urlName);
 		}
 	}

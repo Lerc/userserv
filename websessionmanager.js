@@ -3,6 +3,9 @@ var fs= require('fs');
 var child_process = require('child_process'); 
 require('sugar');
 
+var homedir=process.env.HOME;
+if (homedir)process.chdir(homedir);
+
 var socketpath=process.env.WEBSESSION;
 
 var connection = net.connect({path:socketpath});
