@@ -13,15 +13,18 @@ SCRIPTFILES=jsondir launch-websession launch-websession-manager
 NODEMODULES=websocket sugar
 PROGFILES=userserv naosserv 
 
-userserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c
+userserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c mimehash.c
 	$(CC) userserv.c $(LIBS) -o userserv
 
-naosserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c
+naosserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c mimehash.c
 	$(CC) userserv.c $(LIBS) -DNOTANOS -o naosserv
 
 selfsignedkey: 
 	openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
 	cat key.pem cert.pem >selfsignedkey.pem
+
+mimehash.c: mimetypes.gperf
+	gperf -t mimetypes.gperf --ingore-case -S 4 >mimehash.c
 	
 all: userserv naosserv selfsignedkey
 

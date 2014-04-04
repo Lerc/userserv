@@ -28,6 +28,7 @@ void logFormat(char* text,...);
 #include "readuntil.c"
 #include "authenticationtoken.c"
 #include "websocketbridge.c"
+#include "mimehash.c"
 
 
 #ifdef LOGGING
@@ -137,6 +138,7 @@ void sendLoginPage(int socketfd) {
 
 char* getContentType(char* filename) {
 // returns an allocated string,  must be freed;
+#ifdef EXTERNAL_MIMETYPE
 	char buffer[BUFFER_SIZE];
   char* command;
   asprintf(&command,"mimetype -b \"%s\"",filename);
@@ -147,6 +149,16 @@ char* getContentType(char* filename) {
 	pclose(fp);
 	if (r == NULL) return strdup("text/plain");	
 	return strdup(buffer);
+#else
+  char* fname=strrchr(filename,'/');
+  fname = (fname==NULL)?filename:fname+1;  
+  char* extension = strrchr(fname,'.');
+  if (extension==NULL) return strdup("text/plain");
+  struct fext* contentType;
+	contentType=findExtensionType(extension+1);
+  if (contentType==NULL) return strdup("text/plain");
+  return strdup(contentType->content_type);
+#endif	
 }
 
 char* expandFilename(const char* original) {
