@@ -297,6 +297,9 @@ void handleConnection(int socketfd)  {
 			int nameLen = strcspn(nameStart," ");
 			char* urlName=strndup(nameStart,nameLen);
 			char* fileName=url_decode(urlName);
+			char* queryStart=strchr(fileName,'?');
+			if (queryStart != NULL) *queryStart++='\0';
+			
 			logFormat("url request '%s'\n",urlName);
 			logFormat("filename request '%s'\n",fileName);
 			char* newFileName=expandFilename(fileName);
