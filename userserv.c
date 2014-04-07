@@ -65,6 +65,8 @@ void logFormat(char* text,...) {}
 void fail(char* text) {exit(3);}
 #endif
 
+char* loginRedirect="~";
+
 void scrub() {
 	int i;
 	for (i=0;i<32;i++) {
@@ -241,17 +243,20 @@ void handleConnection(int socketfd)  {
 				while((ampersand=strchr(userpass,'&'))!=NULL) {
 					*ampersand = 0;
 				}
-				logFormat("I think the userName is '%s'\n",user);
-				logFormat("I think the passWord is '%s'\n",pass);				
+				//logFormat("I think the userName is '%s'\n",user);
+				//logFormat("I think the passWord is '%s'\n",pass);				
 				pwd = checkUserPass(user,pass);
 				free(pass);				
 			}
 			char* resultPage;
 			if (pwd != NULL) {
 				logText("setting cookie");
-				char* pageHeaders=strdup("Set-Cookie: 12345678901234567890123456789012; Secure; HttpOnly\r\nContent-Type text/html\r\nLocation: /~\r\n");
-				char* token=pageHeaders+12;
+				char token[33];
+				token[32]='\0';
 				makeAuthenticationToken(pwd->pw_uid,token,32); 
+				
+				char* pageHeaders;
+				asprintf(&pageHeaders,"Set-Cookie: %s; Secure; HttpOnly\r\nContent-Type text/html\r\nLocation: %s\r\n",token,loginRedirect);
 				logText(pageHeaders);
 				resultPage=
 				"<html><head></head><body"
@@ -399,6 +404,9 @@ void flushOldFiles() {
 void init() {
 	system("mkdir -p /var/lib/userserv -m 700");
 	flushOldFiles();
+	
+	char* userRedirect=getenv("WEBLOGIN_REDIRECT");
+	if (userRedirect) loginRedirect=userRedirect;
 }
 
 int main (int argc, char **argv) {

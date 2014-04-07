@@ -29,6 +29,9 @@ if [ "$NOSOCAT" != 'yes' ]; then
 fi
 
 if [ "$NOTANOS" == 'yes' ]; then
+  if [ -z "$WEBLOGIN_REDIRECT" ]; then
+		export WEBLOGIN_REDIRECT="~/Notanos/index.html"
+	fi
 	exec ./naosserv
 fi
 
