@@ -19,16 +19,16 @@ userserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil
 naosserv: userserv.c authenticationtoken.c websocketbridge.c urlcode.c readuntil.c mimehash.c
 	$(CC) userserv.c $(LIBS) -DNOTANOS -o naosserv
 
-selfsignedkey: 
-	openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+selfsignedkey.pem: 
+	openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -subj "/C=NZ/ST=Discombombulated/L=Neverwhere/O=Dis/CN=userserv_selfsigned_key"	       
 	cat key.pem cert.pem >selfsignedkey.pem
 
 mimehash.c: mimetypes.gperf
 	gperf -t mimetypes.gperf --ingore-case -S 4 >mimehash.c
 	
-all: userserv naosserv selfsignedkey
+all: userserv naosserv selfsignedkey.pem
 
-install:  selfsignedkey.pem
+install: all
 	mkdir -p $(datadir)
 	$(INSTALL) -s -m755 $(PROGFILES) "$(datadir)"
 	$(INSTALL)  -m755 $(SCRIPTFILES) "$(datadir)"
