@@ -32,9 +32,10 @@ void logFormat(char* text,...);
 
 
 #ifdef LOGGING
+#define LOGFILE "/var/log/userserv.log"
 
 void logText(char* text) {
-	int fd = open("userserv.log", O_CREAT| O_WRONLY | O_APPEND,0644);
+	int fd = open(LOGFILE, O_CREAT| O_WRONLY | O_APPEND,0644);
 	if (fd>=0) {
 		write(fd,text,strlen(text));
 		write(fd,"\n",1);
@@ -43,7 +44,7 @@ void logText(char* text) {
 }
 
 void logFormat(char* text,...) {
-	int fd = open("userserv.log", O_CREAT| O_WRONLY | O_APPEND,0644);
+	int fd = open(LOGFILE, O_CREAT| O_WRONLY | O_APPEND,0644);
 	if (fd>=0) {
 		va_list arglist;
 		va_start(arglist, text);
@@ -75,11 +76,11 @@ void scrub() {
 }
 
 void sendHTMLPage(int fd, char* status,char* headers, char* content) {
-	dprintf(fd,"HTTP/1.0 %s \r\n%sContent-Type: text/html\r\nContent-Length: %zu\r\n\r\n%s", status,headers, strlen(content),content);
+	dprintf(fd,"HTTP/1.1 %s \r\n%sContent-Type: text/html\r\nContent-Length: %zu\r\nConnection:close\r\n\r\n%s", status,headers, strlen(content),content);
 }
 
 void sendSimpleHTMLPage(int fd, char* status, char* content) {
-	dprintf(fd,"HTTP/1.0 %s \r\nContent-Length: %zu\r\n\r\n%s", status, strlen(content),content);
+	dprintf(fd,"HTTP/1.1 %s \r\nContent-Length: %zu\r\nConnection:close\r\n\r\n%s", status, strlen(content),content);
 }
 
 void sendFile(int socketfd, char* status, int filefd, char * content_type) {
@@ -256,7 +257,7 @@ void handleConnection(int socketfd)  {
 				makeAuthenticationToken(pwd->pw_uid,token,32); 
 				
 				char* pageHeaders;
-				asprintf(&pageHeaders,"Set-Cookie: %s; Secure; HttpOnly\r\nContent-Type text/html\r\nLocation: %s\r\n",token,loginRedirect);
+				asprintf(&pageHeaders,"Set-Cookie: %s; Secure; HttpOnly\r\nLocation: %s\r\n",token,loginRedirect);
 				logText(pageHeaders);
 				resultPage=
 				"<html><head></head><body"
