@@ -96,7 +96,10 @@ callHandlers.exec=function(request) {
 
 callHandlers.spawn=function(request) {
 	var a=request.args; 
-	child_process.spawn(a.command,a.args,a.options);
+	var spawnling = child_process.spawn(a.command,a.args,a.options);
+	spawnling.on('exit' , function(e) { 
+		failCall (request,"exit code: "+e.code+"   signal: "+e.signal);
+	});
 }
 
 
